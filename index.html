@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rabbit Hole Notebook</title>
+<meta name="description" content="A private, offline journal for wonderings, rabbit holes, reading and small plans.">
+<meta name="theme-color" content="#F4F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171C2A" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rabbit Holes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Patrick+Hand&family=Nunito:wght@400;600;800&display=swap">
+<style>
+/* Layout: one journal page. Today's date up top, a capture slip, then notes taped in by day. Washi-tape colours tell the four kinds apart. */
+:root{
+  --paper:#F4F6F3; --dot:#C9D2CB; --sheet:#FFFFFF; --ink:#23304A; --muted:#66708A; --rule:#DCE3EE;
+  --accent:#2F4A86; --accent-ink:#FFFFFF; --hi:#FFE08A; --shadow:rgba(35,48,74,.10);
+  --tape-wonder:rgba(241,200,90,.78); --tape-hole:rgba(132,206,178,.78); --tape-read:rgba(240,160,180,.78); --tape-plan:rgba(160,178,238,.80);
+  --ink-wonder:#7A5600; --ink-hole:#0D5D48; --ink-read:#8E2846; --ink-plan:#2A428E;
+  --danger:#B3261E;
+  --hand:"Caveat", "Segoe Print", "Comic Sans MS", cursive;
+  --pen:"Patrick Hand", "Segoe Print", "Comic Sans MS", cursive;
+  --ui:"Nunito", "Segoe UI", system-ui, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#171C2A; --dot:#2B3349; --sheet:#1F2638; --ink:#E9EDF6; --muted:#9CA6BD; --rule:#2F384F;
+    --accent:#A9BEF7; --accent-ink:#171C2A; --hi:#6A5A1F; --shadow:rgba(0,0,0,.35);
+    --tape-wonder:rgba(214,176,70,.55); --tape-hole:rgba(100,180,150,.55); --tape-read:rgba(214,120,145,.55); --tape-plan:rgba(130,150,220,.60);
+    --ink-wonder:#F4D47E; --ink-hole:#8EE4CC; --ink-read:#FFA9C2; --ink-plan:#AFC3FF;
+    --danger:#FF8A80;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background-color:var(--paper);
+  background-image:radial-gradient(var(--dot) 1.1px, transparent 1.3px);
+  background-size:22px 22px;
+  color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.5;
+  min-height:100vh;
+}
+.page{max-width:720px;margin:0 auto;position:relative;
+  padding-top:calc(26px + env(safe-area-inset-top, 0px));padding-bottom:calc(90px + env(safe-area-inset-bottom, 0px));
+  padding-left:max(18px, env(safe-area-inset-left, 0px));padding-right:max(18px, env(safe-area-inset-right, 0px));
+  display:flex;flex-direction:column;gap:22px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+
+/* ribbon bookmark */
+.ribbon{position:absolute;top:0;right:max(26px, env(safe-area-inset-right, 0px));width:22px;height:72px;background:var(--tape-read);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);opacity:.9;pointer-events:none}
+
+header{display:flex;flex-direction:column;gap:2px;padding-right:40px}
+.today{font-family:var(--hand);font-size:22px;color:var(--muted);line-height:1}
+h1{font-family:var(--hand);font-weight:700;font-size:clamp(40px,10vw,56px);line-height:1;margin:2px 0 0;letter-spacing:.5px}
+h1 span{background:linear-gradient(transparent 60%, var(--hi) 60%, var(--hi) 88%, transparent 88%);padding:0 4px}
+.stats{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--pen);font-size:17px;color:var(--muted);margin-top:6px}
+.stats b{color:var(--ink);font-weight:400;font-variant-numeric:tabular-nums}
+
+.btn{border:1.5px solid var(--rule);background:var(--sheet);border-radius:999px;padding:7px 14px;font-size:14px;font-weight:800;font-family:var(--ui)}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:4px 11px;font-size:13px}
+.btn.link{border:0;background:none;padding:2px 4px;color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.btn.danger{color:var(--danger);border-color:transparent;background:transparent}
+.btn.danger.armed{background:var(--danger);color:var(--sheet);border-color:var(--danger)}
+.hint{font-size:13px;color:var(--muted)}
+
+/* paper slip base */
+.slip{background:var(--sheet);border-radius:4px;box-shadow:0 1px 0 var(--rule), 0 6px 18px var(--shadow);position:relative}
+.slip.taped::before{content:"";position:absolute;top:-10px;left:22px;width:86px;height:22px;background:var(--tape, var(--tape-wonder));transform:rotate(-4deg);border-radius:1px}
+
+.capture{padding:22px 18px 14px;display:flex;flex-direction:column;gap:10px;--tape:var(--tape-plan)}
+.capture textarea{width:100%;border:0;background:transparent;resize:vertical;min-height:84px;
+  font-family:var(--pen);font-size:21px;line-height:32px;padding:0 2px;
+  background-image:repeating-linear-gradient(transparent 0 31px, var(--rule) 31px 32px);background-attachment:local}
+.capture textarea::placeholder{color:var(--muted)}
+.capture textarea:focus{outline:none}
+.capture-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.kinds{display:flex;flex-wrap:wrap;gap:6px}
+.kind{border:0;border-radius:3px;padding:4px 12px;font-family:var(--hand);font-size:20px;font-weight:700;line-height:1.2;background:transparent;color:var(--muted);transform:rotate(-1deg)}
+.kind[aria-pressed="true"]{color:var(--ink)}
+.kind[aria-pressed="true"][data-kind="wonder"]{background:var(--tape-wonder)}
+.kind[aria-pressed="true"][data-kind="hole"]{background:var(--tape-hole)}
+.kind[aria-pressed="true"][data-kind="read"]{background:var(--tape-read)}
+.kind[aria-pressed="true"][data-kind="plan"]{background:var(--tape-plan)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.tabs{display:flex;flex-wrap:wrap;gap:2px}
+.tab{border:0;background:transparent;padding:4px 10px;font-family:var(--hand);font-size:21px;font-weight:700;color:var(--muted);border-radius:3px}
+.tab[aria-selected="true"]{color:var(--ink);background:linear-gradient(transparent 55%, var(--hi) 55%, var(--hi) 90%, transparent 90%)}
+.tab .n{font-family:var(--ui);font-size:12px;font-weight:600;margin-left:3px;vertical-align:2px;font-variant-numeric:tabular-nums}
+.side{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.timer-read{font-family:var(--pen);font-size:18px;font-variant-numeric:tabular-nums}
+.timer-done{font-family:var(--hand);font-size:21px;color:var(--accent)}
+
+.banner{font-family:var(--pen);font-size:17px;padding:10px 14px;border-radius:4px;background:var(--sheet);border:1.5px dashed var(--rule);display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+
+.list{display:flex;flex-direction:column;gap:18px}
+.day{font-family:var(--hand);font-size:26px;font-weight:700;line-height:1;margin:10px 0 -4px 4px;color:var(--ink)}
+.day small{font-family:var(--ui);font-size:12px;font-weight:600;color:var(--muted);margin-left:8px;letter-spacing:.04em;text-transform:uppercase}
+.card{padding:18px 16px 12px;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.card:nth-child(odd){transform:rotate(-.35deg)}
+.card:nth-child(even){transform:rotate(.3deg)}
+.card[data-kind="wonder"]{--tape:var(--tape-wonder)} .card[data-kind="hole"]{--tape:var(--tape-hole)}
+.card[data-kind="read"]{--tape:var(--tape-read)} .card[data-kind="plan"]{--tape:var(--tape-plan)}
+.card.picked{box-shadow:0 0 0 3px var(--accent), 0 6px 18px var(--shadow)}
+.card-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.label{font-family:var(--hand);font-size:18px;font-weight:700;line-height:1}
+.label[data-kind="wonder"]{color:var(--ink-wonder)} .label[data-kind="hole"]{color:var(--ink-hole)}
+.label[data-kind="read"]{color:var(--ink-read)} .label[data-kind="plan"]{color:var(--ink-plan)}
+.card-open{all:unset;cursor:pointer;display:block;font-family:var(--pen);font-size:21px;line-height:1.3;overflow-wrap:anywhere}
+.card-open:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+.card.done .card-open{text-decoration:line-through;text-decoration-thickness:2px;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--muted)}
+.dots{display:inline-flex;gap:4px;vertical-align:middle}
+.dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink-hole);display:inline-block}
+.dots i.on{background:var(--ink-hole)}
+.pill{border:1.5px solid var(--rule);background:transparent;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:800;color:var(--muted)}
+.stamp{font-family:var(--hand);font-size:18px;font-weight:700;color:var(--ink-hole);border:2px solid var(--ink-hole);border-radius:4px;padding:0 6px;transform:rotate(-6deg);line-height:1.2}
+.check{flex:none;width:22px;height:22px;margin-top:4px;accent-color:var(--accent)}
+
+.editor{padding:24px 18px 16px;display:flex;flex-direction:column;gap:16px;transform:none!important}
+.editor-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.field{display:flex;flex-direction:column;gap:2px}
+.field label{font-family:var(--hand);font-size:21px;font-weight:700;color:var(--muted);line-height:1.1}
+.field label .num{color:var(--accent);margin-right:6px}
+.field textarea,.field input{width:100%;border:0;background:transparent;font-family:var(--pen);font-size:19px;line-height:30px;padding:0 2px;
+  background-image:repeating-linear-gradient(transparent 0 29px, var(--rule) 29px 30px);background-attachment:local}
+.field textarea{resize:vertical;min-height:60px}
+.field textarea.big{font-size:23px;line-height:34px;background-image:repeating-linear-gradient(transparent 0 33px, var(--rule) 33px 34px)}
+.field textarea:focus,.field input:focus{outline:none;background-image:repeating-linear-gradient(transparent 0 29px, var(--accent) 29px 30px)}
+.field textarea.big:focus{background-image:repeating-linear-gradient(transparent 0 33px, var(--accent) 33px 34px)}
+.field select{border:1.5px solid var(--rule);border-radius:8px;background:var(--sheet);padding:6px 10px;font-family:var(--ui)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row2{grid-template-columns:1fr}}
+.inline-check{display:flex;gap:8px;align-items:center;font-family:var(--hand);font-size:21px;font-weight:700}
+.inline-check input{width:20px;height:20px;accent-color:var(--accent)}
+.editor-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border-top:1.5px dashed var(--rule);padding-top:12px}
+.save-state{font-size:13px;color:var(--muted)}
+.draft{border:1.5px dashed var(--rule);border-radius:4px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.draft h3{margin:0;font-family:var(--hand);font-size:24px}
+.draft ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;font-family:var(--pen);font-size:18px;overflow-wrap:anywhere}
+
+.empty{text-align:center;padding:30px 16px;display:flex;flex-direction:column;gap:6px;align-items:center;transform:rotate(-.4deg)}
+.empty .big{font-family:var(--hand);font-size:32px;font-weight:700;line-height:1.1}
+.empty p{margin:0;color:var(--muted);max-width:42ch}
+.empty ul{list-style:none;padding:0;margin:6px 0 0;display:flex;flex-direction:column;gap:2px;font-family:var(--pen);font-size:18px}
+
+.backup{padding:18px;display:flex;flex-direction:column;gap:10px;--tape:var(--tape-hole)}
+.backup h2{margin:0;font-family:var(--hand);font-size:28px;line-height:1}
+.backup p{margin:0;color:var(--muted);font-size:14px}
+.backup-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);
+  padding:9px 16px;border-radius:999px;font-family:var(--pen);font-size:17px;max-width:calc(100% - 32px);z-index:20;text-align:center}
+@media (prefers-reduced-motion: reduce){ .card:nth-child(odd),.card:nth-child(even),.kind,.empty{transform:none} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="ribbon" aria-hidden="true"></div>
+  <header>
+    <div class="today" id="today"></div>
+    <h1><span>Rabbit Hole</span> Notebook</h1>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="slip taped capture" aria-label="Write something down">
+    <label for="capture" style="position:absolute;left:-9999px">Write something down</label>
+    <textarea id="capture" rows="2" placeholder="What are you wondering about right now?"></textarea>
+    <div class="capture-row">
+      <div class="kinds" id="kinds" role="group" aria-label="What kind of note"></div>
+      <div class="side">
+        <span class="hint" id="shortcut">Ctrl + Enter saves</span>
+        <button class="btn primary" id="saveCapture" type="button">Jot it down</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Show"></div>
+    <div class="side">
+      <span id="timer" class="side"></span>
+      <button class="btn small" id="pick" type="button">Pick one for me</button>
+    </div>
+  </div>
+
+  <div class="list" id="list" aria-live="polite"></div>
+
+  <section class="slip taped backup" aria-label="Backups">
+    <h2>Keep it safe</h2>
+    <p id="backupInfo">Your notebook lives only on this device. Save a backup now and then, to Drive or a chat with yourself.</p>
+    <div class="backup-row">
+      <button class="btn primary small" id="exportBtn" type="button">Save a backup</button>
+      <label class="btn small" for="importFile" style="display:inline-block">Restore from a backup</label>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  const KINDS = {
+    wonder:{label:"Wondering", plural:"Wonderings", place:"What are you wondering about right now?", main:"What are you wondering?"},
+    hole:{label:"Rabbit hole", plural:"Rabbit holes", place:"The question you want to go deep on", main:"1. I wondered"},
+    read:{label:"Reading", plural:"Reading", place:"A book, article, video or thread to remember", main:"Title"},
+    plan:{label:"Plan", plural:"Plans", place:"One small thing you want to do", main:"The plan"}
+  };
+  const READ_STATUS = {want:"Want to read", reading:"Reading now", done:"Finished"};
+  const KEY = "rabbit-hole-notebook.entries", BKEY = "rabbit-hole-notebook.lastBackup", TKEY = "rabbit-hole-notebook.timerEnd", NKEY = "rabbit-hole-notebook.nudgeHidden";
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const clone = o => JSON.parse(JSON.stringify(o));
+  const newId = () => "e" + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  const emptyHole = () => ({found:"", weird:"", unclear:"", ask:"", sources:""});
+
+  const ls = {
+    get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+    set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+    del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+  };
+
+  /* ---------- storage: this device only ---------- */
+  let entries = [];
+  let storageOK = true;
+  try{ const raw = JSON.parse(ls.get(KEY) || "[]"); entries = Array.isArray(raw) ? raw : []; }catch(e){ entries = []; }
+  try{ localStorage.setItem("rhn.test","1"); localStorage.removeItem("rhn.test"); }catch(e){ storageOK = false; }
+  function persist(){
+    if(!ls.set(KEY, JSON.stringify(entries))){
+      storageOK = false; renderBanner();
+      toast("Couldn't save on this device. Save a backup so nothing gets lost.");
+    }
+  }
+  if(navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(()=>{}); }
+
+  let filter = "all", captureKind = "wonder", openId = null, editorNode = null, pickedId = null;
+
+  let toastT;
+  function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>{ t.hidden = true; }, 2800); }
+
+  function save(e){
+    e.updatedAt = Date.now();
+    const i = entries.findIndex(x=>x.id===e.id);
+    if(i>=0) entries[i] = clone(e); else entries.unshift(clone(e));
+    persist(); renderAll();
+  }
+  function remove(id){ entries = entries.filter(x=>x.id!==id); persist(); renderAll(); }
+
+  /* ---------- header ---------- */
+  $("#today").textContent = new Date().toLocaleDateString([], {weekday:"long", day:"numeric", month:"long"});
+  function renderStats(){
+    const w = entries.filter(e=>e.kind==="wonder").length;
+    const h = entries.filter(e=>e.kind==="hole").length;
+    const p = entries.filter(e=>e.kind==="hole" && e.posted).length;
+    const r = entries.filter(e=>e.kind==="read" && e.status==="done").length;
+    $("#stats").innerHTML = `<span><b>${w}</b> wondering${w===1?"":"s"}</span><span><b>${h}</b> rabbit hole${h===1?"":"s"}</span><span><b>${p}</b> posted</span><span><b>${r}</b> finished reads</span>`;
+  }
+
+  /* ---------- banner: storage + backup nudge ---------- */
+  function renderBanner(){
+    const b = $("#banner");
+    if(!storageOK){
+      b.innerHTML = `<span>This browser isn't letting the notebook save. Open it from your home-screen icon, or in Chrome or Safari, not a private tab.</span>`;
+      b.hidden = false; return;
+    }
+    const last = Number(ls.get(BKEY) || 0);
+    const hiddenUntil = Number(ls.get(NKEY) || 0);
+    const days = last ? Math.floor((Date.now()-last)/86400000) : null;
+    const due = entries.length >= 5 && (days === null || days >= 14) && Date.now() > hiddenUntil;
+    if(due){
+      b.innerHTML = `<span>${days===null ? "You haven't saved a backup yet." : `It's been ${days} days since your last backup.`} Two taps keeps it all safe.</span>
+        <span class="side"><button class="btn primary small" type="button" data-b="export">Save a backup</button><button class="btn link" type="button" data-b="later">Later</button></span>`;
+      b.hidden = false;
+    } else b.hidden = true;
+  }
+  $("#banner").addEventListener("click", ev=>{
+    const a = ev.target.closest("[data-b]"); if(!a) return;
+    if(a.dataset.b==="export") exportBackup();
+    if(a.dataset.b==="later"){ ls.set(NKEY, String(Date.now()+3*86400000)); renderBanner(); }
+  });
+  function renderBackupInfo(){
+    const last = Number(ls.get(BKEY) || 0);
+    $("#backupInfo").textContent = last
+      ? `Your notebook lives only on this device. Last backup: ${new Date(last).toLocaleDateString([], {day:"numeric", month:"long", year:"numeric"})}.`
+      : "Your notebook lives only on this device. Save a backup now and then, to Drive or a chat with yourself.";
+  }
+
+  /* ---------- backup ---------- */
+  function exportBackup(){
+    const data = {app:"rabbit-hole-notebook", version:1, exportedAt:new Date().toISOString(), entries};
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+    const d = new Date(); const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const name = `rabbit-hole-notebook-${stamp}.json`;
+    const file = (typeof File === "function") ? new File([blob], name, {type:"application/json"}) : null;
+    const done = ()=>{ ls.set(BKEY, String(Date.now())); renderBanner(); renderBackupInfo(); toast("Backup saved. Keep it somewhere safe."); };
+    // On phones, the share sheet lets you send it straight to Drive or WhatsApp.
+    if(file && navigator.canShare && navigator.canShare({files:[file]}) && /Android|iPhone|iPad/i.test(navigator.userAgent)){
+      navigator.share({files:[file], title:"Rabbit Hole Notebook backup"}).then(done).catch(err=>{ if(err && err.name!=="AbortError") downloadFile(blob, name, done); });
+    } else downloadFile(blob, name, done);
+  }
+  function downloadFile(blob, name, done){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000); done();
+  }
+  $("#exportBtn").addEventListener("click", exportBackup);
+  $("#importFile").addEventListener("change", ev=>{
+    const f = ev.target.files && ev.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        const list = Array.isArray(data) ? data : data.entries;
+        if(!Array.isArray(list)) throw new Error("bad");
+        let added = 0, updated = 0;
+        for(const e of list){
+          if(!e || typeof e !== "object" || !e.id || !KINDS[e.kind]) continue;
+          const i = entries.findIndex(x=>x.id===e.id);
+          if(i<0){ entries.push(e); added++; }
+          else if((e.updatedAt||0) > (entries[i].updatedAt||0)){ entries[i] = e; updated++; }
+        }
+        entries.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+        persist(); renderAll();
+        toast(added||updated ? `Restored: ${added} new, ${updated} updated. Nothing was deleted.` : "Everything in that backup is already here.");
+      }catch(err){ toast("That file isn't a notebook backup. Pick the .json file you saved."); }
+      ev.target.value = "";
+    };
+    reader.readAsText(f);
+  });
+
+  /* ---------- capture ---------- */
+  function renderKinds(){
+    $("#kinds").innerHTML = Object.entries(KINDS).map(([k,v]) =>
+      `<button type="button" class="kind" data-kind="${k}" aria-pressed="${k===captureKind}">${v.label}</button>`).join("");
+    $("#capture").placeholder = KINDS[captureKind].place;
+  }
+  $("#kinds").addEventListener("click", ev=>{
+    const b = ev.target.closest(".kind"); if(!b) return;
+    captureKind = b.dataset.kind; renderKinds(); $("#capture").focus();
+  });
+  function doCapture(){
+    const ta = $("#capture"); const text = ta.value.trim();
+    if(!text){ ta.focus(); return; }
+    const now = Date.now();
+    const e = {id:newId(), kind:captureKind, text, body:"", createdAt:now, updatedAt:now};
+    if(captureKind==="read") e.status = "want";
+    if(captureKind==="plan") e.done = false;
+    if(captureKind==="hole") e.rh = emptyHole();
+    ta.value = ""; save(e); toast("Jotted down in " + KINDS[captureKind].plural);
+  }
+  $("#saveCapture").addEventListener("click", doCapture);
+  $("#capture").addEventListener("keydown", ev=>{ if(ev.key==="Enter" && (ev.ctrlKey||ev.metaKey)){ ev.preventDefault(); doCapture(); } });
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("#shortcut").hidden = true;
+  else if(/Mac/.test(navigator.platform||"")) $("#shortcut").textContent = "Cmd + Enter saves";
+
+  /* ---------- tabs ---------- */
+  function renderTabs(){
+    const counts = {all:entries.length}; for(const k in KINDS) counts[k] = entries.filter(e=>e.kind===k).length;
+    const tabs = [["all","Everything"]].concat(Object.entries(KINDS).map(([k,v])=>[k,v.plural]));
+    $("#tabs").innerHTML = tabs.map(([k,l]) => `<button type="button" role="tab" class="tab" data-f="${k}" aria-selected="${filter===k}">${l}<span class="n">${counts[k]}</span></button>`).join("");
+  }
+  $("#tabs").addEventListener("click", ev=>{ const b = ev.target.closest(".tab"); if(!b) return; filter = b.dataset.f; renderAll(); });
+
+  /* ---------- list ---------- */
+  function dayKey(ms){ const d = new Date(ms||0); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); }
+  function dayLabel(ms){
+    const d = new Date(ms||0), now = new Date(); const y = new Date(now); y.setDate(now.getDate()-1);
+    if(d.toDateString()===now.toDateString()) return ["Today", d.toLocaleDateString([], {day:"numeric", month:"short"})];
+    if(d.toDateString()===y.toDateString()) return ["Yesterday", d.toLocaleDateString([], {day:"numeric", month:"short"})];
+    return [d.toLocaleDateString([], {weekday:"long"}), d.toLocaleDateString([], {day:"numeric", month:"short", year: d.getFullYear()===now.getFullYear()?undefined:"numeric"})];
+  }
+  function cardHTML(e){
+    const k = KINDS[e.kind] ? e.kind : "wonder";
+    let lead = "", meta = [`<span>${esc(new Date(e.createdAt||0).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}))}</span>`];
+    if(k==="plan") lead = `<input type="checkbox" class="check" data-act="toggle" data-id="${e.id}" ${e.done?"checked":""} aria-label="Mark done">`;
+    if(k==="hole"){
+      const r = e.rh||{}; const p = ["found","weird","unclear"].map(x=>(r[x]||"").trim()?1:0);
+      meta.push(`<span class="dots" title="${p.reduce((a,b)=>a+b,0)} of 3 parts written">${p.map(x=>`<i class="${x?"on":""}"></i>`).join("")}</span>`);
+      if(e.posted) meta.push(`<span class="stamp">posted!</span>`);
+    }
+    if(k==="read"){
+      meta.push(`<button type="button" class="pill" data-act="status" data-id="${e.id}" title="Change status">${esc(READ_STATUS[e.status]||READ_STATUS.want)}</button>`);
+      if(e.source) meta.push(`<span style="overflow-wrap:anywhere">${esc(e.source)}</span>`);
+    }
+    if(k==="wonder") meta.push(`<button type="button" class="btn link" data-act="dive" data-id="${e.id}">Go down this hole</button>`);
+    return `<article class="slip taped card ${e.done?"done":""} ${pickedId===e.id?"picked":""}" data-kind="${k}" data-card="${e.id}">
+      ${lead}<div class="card-main"><span class="label" data-kind="${k}">${KINDS[k].label}</span>
+      <button type="button" class="card-open" data-act="open" data-id="${e.id}">${esc((e.text||"Untitled").split("\n")[0])}</button>
+      <div class="meta">${meta.join("")}</div></div></article>`;
+  }
+  function emptyHTML(){
+    const by = {
+      all:["A fresh page.","Write down the next thing that makes you go “wait, why?”. Anything counts:",["Why do people hum while cooking?","That article about octopus brains","One 45-minute dive this week"]],
+      wonder:["No wonderings yet.","Next time something makes you curious, jot it down above.",[]],
+      hole:["No rabbit holes yet.","Tap “Go down this hole” on any wondering, then write what you find.",[]],
+      read:["Nothing on the reading list.","Books, articles, videos, threads. Keep what stuck with you here.",[]],
+      plan:["No plans yet.","Keep them tiny. One step you could do today.",[]]
+    }[filter];
+    return `<div class="slip empty"><div class="big">${by[0]}</div><p>${by[1]}</p>${by[2].length?`<ul>${by[2].map(x=>`<li>“${esc(x)}”</li>`).join("")}</ul>`:""}</div>`;
+  }
+  function renderList(){
+    let shown = filter==="all" ? entries : entries.filter(e=>e.kind===filter);
+    shown = shown.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    const el = $("#list");
+    if(!shown.length){ el.innerHTML = emptyHTML(); openId = null; editorNode = null; return; }
+    const keep = openId && editorNode && shown.some(e=>e.id===openId) ? editorNode : null;
+    let html = "", lastDay = null;
+    for(const e of shown){
+      const dk = dayKey(e.createdAt);
+      if(dk!==lastDay){ const [a,b] = dayLabel(e.createdAt); html += `<div class="day">${esc(a)}<small>${esc(b)}</small></div>`; lastDay = dk; }
+      html += e.id===openId ? `<div data-slot="${e.id}"></div>` : cardHTML(e);
+    }
+    el.innerHTML = html;
+    if(openId){
+      const slot = el.querySelector(`[data-slot="${openId}"]`);
+      if(slot){ if(!keep) editorNode = buildEditor(entries.find(e=>e.id===openId)); slot.replaceWith(editorNode); }
+      else { openId = null; editorNode = null; }
+    }
+  }
+  function renderAll(){ renderTabs(); renderStats(); renderList(); renderBanner(); }
+
+  $("#list").addEventListener("click", ev=>{
+    const t = ev.target.closest("[data-act]"); if(!t || t.closest(".editor")) return;
+    const id = t.dataset.id; const e = entries.find(x=>x.id===id); if(!e) return;
+    const act = t.dataset.act;
+    if(act==="open") openEditor(id);
+    else if(act==="toggle"){ const c = clone(e); c.done = t.checked; save(c); toast(c.done?"Done. Look at you.":"Back on the list"); }
+    else if(act==="status"){ const o = ["want","reading","done"]; const c = clone(e); c.status = o[(o.indexOf(c.status||"want")+1)%3]; save(c); }
+    else if(act==="dive"){ const c = clone(e); c.kind = "hole"; c.rh = c.rh || emptyHole(); save(c); if(filter==="wonder") filter = "hole"; openEditor(id); toast("Moved to Rabbit holes. Happy digging."); }
+  });
+
+  /* ---------- editor ---------- */
+  let draft = null, dirty = false, saveT = null;
+  function openEditor(id){
+    if(openId && dirty) flushSave();
+    openId = id; editorNode = null; dirty = false;
+    draft = clone(entries.find(e=>e.id===id));
+    renderAll();
+    const first = editorNode && editorNode.querySelector("textarea");
+    if(first){ first.focus(); editorNode.scrollIntoView({block:"nearest"}); }
+  }
+  function closeEditor(){ if(dirty) flushSave(); openId = null; editorNode = null; draft = null; renderAll(); }
+  function flushSave(){
+    clearTimeout(saveT); if(!draft || !dirty) return;
+    dirty = false; save(clone(draft)); setSaveState("Saved");
+  }
+  function setSaveState(t){ const s = editorNode && editorNode.querySelector(".save-state"); if(s) s.textContent = t; }
+  function touched(){ dirty = true; setSaveState("Writing…"); clearTimeout(saveT); saveT = setTimeout(flushSave, 900); }
+
+  function field(id, label, value, o={}){
+    const tag = o.input ? `<input id="${id}" data-f="${o.key}" value="${esc(value)}" ${o.ph?`placeholder="${esc(o.ph)}"`:""}>`
+      : `<textarea id="${id}" data-f="${o.key}" class="${o.big?"big":""}" rows="${o.rows||3}" ${o.ph?`placeholder="${esc(o.ph)}"`:""}>${esc(value)}</textarea>`;
+    return `<div class="field"><label for="${id}">${o.num?`<span class="num">${o.num}.</span>`:""}${label}</label>${tag}</div>`;
+  }
+  function buildEditor(e){
+    if(!draft || draft.id!==e.id) draft = clone(e);
+    const d = draft, k = KINDS[d.kind] ? d.kind : "wonder";
+    const wrap = document.createElement("section");
+    wrap.className = "slip taped editor"; wrap.setAttribute("aria-label","Editing note");
+    wrap.style.setProperty("--tape", `var(--tape-${k})`);
+    let body = field("f-text", KINDS[k].main, d.text, {key:"text", big:true, rows:2});
+    if(k==="hole"){
+      const r = d.rh || (d.rh = emptyHole());
+      body += field("f-found","What I found", r.found, {key:"rh.found", num:"2", rows:4, ph:"As far as you got"});
+      body += field("f-weird","The weird part", r.weird, {key:"rh.weird", num:"3", rows:3, ph:"The bit that made you go “wait, what?”"});
+      body += field("f-unclear","What I still don't get", r.unclear, {key:"rh.unclear", num:"4", rows:3, ph:"Not knowing is allowed. It's the best slide."});
+      body += field("f-ask","Your turn", r.ask, {key:"rh.ask", num:"5", input:true, ph:"What do you think?"});
+      body += field("f-sources","Where I read it", r.sources, {key:"rh.sources", rows:2, ph:"Links, books, the person who told you"});
+      body += `<label class="inline-check"><input type="checkbox" id="f-posted" data-f="posted" ${d.posted?"checked":""}> I posted this</label>`;
+      body += `<div class="draft" id="draftBox" hidden></div>`;
+    } else if(k==="read"){
+      body += `<div class="row2">${field("f-source","Author or link", d.source||"", {key:"source", input:true, ph:"Who made it, or where it lives"})}
+        <div class="field"><label for="f-status">Status</label><select id="f-status" data-f="status">${Object.entries(READ_STATUS).map(([v,l])=>`<option value="${v}" ${(d.status||"want")===v?"selected":""}>${l}</option>`).join("")}</select></div></div>`;
+      body += field("f-body","What stuck with me", d.body||"", {key:"body", rows:4});
+    } else if(k==="plan"){
+      body += `<label class="inline-check"><input type="checkbox" id="f-done" data-f="done" ${d.done?"checked":""}> Done</label>`;
+      body += field("f-body","Notes", d.body||"", {key:"body", rows:3, ph:"Why it matters, or the first tiny step"});
+    } else {
+      body += field("f-body","Notes", d.body||"", {key:"body", rows:3, ph:"Anything else rattling around"});
+    }
+    wrap.innerHTML = `<div class="editor-head"><span class="label" data-kind="${k}">${KINDS[k].label}</span><span class="save-state">Saved</span></div>
+      ${body}
+      <div class="editor-foot">
+        <div class="side"><label class="hint" for="f-kind">Move to</label>
+          <select id="f-kind" class="btn small">${Object.entries(KINDS).map(([v,o])=>`<option value="${v}" ${v===k?"selected":""}>${o.label}</option>`).join("")}</select>
+          ${k==="hole"?`<button type="button" class="btn small" data-ed="draft">Turn into post</button>`:""}</div>
+        <div class="side"><button type="button" class="btn danger small" data-ed="delete">Delete</button><button type="button" class="btn primary small" data-ed="close">Close</button></div>
+      </div>`;
+    wrap.addEventListener("input", ev=>{
+      const f = ev.target.dataset.f; if(!f || ev.target.id==="f-kind") return;
+      const val = ev.target.type==="checkbox" ? ev.target.checked : ev.target.value;
+      if(f.startsWith("rh.")){ draft.rh = draft.rh || emptyHole(); draft.rh[f.slice(3)] = val; } else draft[f] = val;
+      touched();
+      const box = wrap.querySelector("#draftBox"); if(box && !box.hidden) fillDraft(box);
+    });
+    wrap.addEventListener("change", ev=>{
+      if(ev.target.id==="f-kind"){
+        draft.kind = ev.target.value;
+        if(draft.kind==="hole") draft.rh = draft.rh || emptyHole();
+        if(draft.kind==="read") draft.status = draft.status || "want";
+        if(draft.kind==="plan") draft.done = !!draft.done;
+        dirty = true; flushSave(); editorNode = null; renderAll();
+        toast("Moved to " + KINDS[draft.kind].plural);
+      } else if(ev.target.type==="checkbox" || ev.target.tagName==="SELECT") flushSave();
+    });
+    let armT = null;
+    wrap.addEventListener("click", async ev=>{
+      const b = ev.target.closest("[data-ed]"); if(!b) return;
+      const a = b.dataset.ed;
+      if(a==="close") closeEditor();
+      else if(a==="draft"){ const box = wrap.querySelector("#draftBox"); box.hidden = !box.hidden; b.textContent = box.hidden?"Turn into post":"Hide post draft"; if(!box.hidden) fillDraft(box); }
+      else if(a==="copy"){
+        try{ await navigator.clipboard.writeText(draftText()); toast("Copied. Go make those slides."); }
+        catch(_){ const ol = wrap.querySelector("#draftBox ol"); const r = document.createRange(); r.selectNodeContents(ol); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Selected. Copy it from here."); }
+      }
+      else if(a==="delete"){
+        if(!b.classList.contains("armed")){ b.classList.add("armed"); b.textContent = "Tap again to delete"; clearTimeout(armT); armT = setTimeout(()=>{ b.classList.remove("armed"); b.textContent = "Delete"; }, 3000); return; }
+        const id = draft.id; clearTimeout(saveT); dirty = false; openId = null; editorNode = null; draft = null; remove(id); toast("Torn out of the notebook");
+      }
+    });
+    return wrap;
+  }
+  function draftText(){
+    const r = (draft && draft.rh) || {};
+    return [["I wondered", draft.text],["What I found", r.found],["The weird part", r.weird],["What I still don't get", r.unclear],["Your turn", r.ask || "What do you think?"]]
+      .map(([h,v],i)=>`Slide ${i+1}. ${h}: ${(v||"").trim() || "…"}`).join("\n\n");
+  }
+  function fillDraft(box){
+    const r = draft.rh || {};
+    const items = [["I wondered", draft.text],["What I found", r.found],["The weird part", r.weird],["What I still don't get", r.unclear],["Your turn", r.ask || "What do you think?"]];
+    box.innerHTML = `<h3>Your five slides</h3><ol>${items.map(([h,v])=>`<li><b>${h}:</b> ${esc((v||"").trim()||"…")}</li>`).join("")}</ol>
+      <div class="side"><button type="button" class="btn small" data-ed="copy">Copy slide text</button><span class="hint">Messy is fine. Post it today.</span></div>`;
+  }
+
+  /* ---------- pick one ---------- */
+  $("#pick").addEventListener("click", ()=>{
+    const pool = entries.filter(e=>e.kind==="wonder");
+    if(!pool.length){ toast("No wonderings to pick from yet. Jot one down first."); return; }
+    const p = pool[Math.floor(Math.random()*pool.length)];
+    pickedId = p.id; if(filter!=="all" && filter!=="wonder") filter = "wonder";
+    renderAll();
+    const el = document.querySelector(`[data-card="${p.id}"]`);
+    if(el) el.scrollIntoView({block:"center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"});
+    toast("This one. Go down the hole?");
+  });
+
+  /* ---------- 45-minute dive timer ---------- */
+  let tick = null, timesUp = false;
+  function renderTimer(){
+    const end = Number(ls.get(TKEY) || 0), left = end - Date.now(), box = $("#timer");
+    if(end && left > 0){
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      box.innerHTML = `<span class="timer-read">${m}:${String(s).padStart(2,"0")} left</span><button type="button" class="btn small" data-t="stop">Stop</button>`;
+      if(!tick) tick = setInterval(renderTimer, 1000);
+    } else {
+      if(end){ ls.del(TKEY); timesUp = true; }
+      clearInterval(tick); tick = null;
+      box.innerHTML = (timesUp?`<span class="timer-done">Time's up! Write what you found.</span>`:"") + `<button type="button" class="btn small" data-t="start">45-min dive</button>`;
+    }
+  }
+  $("#timer").addEventListener("click", ev=>{
+    const t = ev.target.closest("[data-t]"); if(!t) return;
+    if(t.dataset.t==="start"){ timesUp = false; ls.set(TKEY, String(Date.now()+45*60000)); renderTimer(); toast("45 minutes. Go deep."); }
+    else { ls.del(TKEY); timesUp = false; renderTimer(); }
+  });
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) renderTimer(); });
+
+  /* ---------- save on close, offline app ---------- */
+  window.addEventListener("pagehide", ()=>{ if(dirty) flushSave(); });
+  if("serviceWorker" in navigator && location.protocol === "https:"){
+    window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  }
+
+  renderKinds(); renderTimer(); renderBackupInfo(); renderAll();
+})();
+</script>
+</body>
+</html>
