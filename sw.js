@@ -1,6 +1,6 @@
 // Rabbit Hole Notebook: keeps the app itself on the phone so it opens offline.
 // Your notes are not stored here; they live in the browser's own storage.
-const VERSION = "rhn-v1";
+const VERSION = "rhn-v3";
 const APP = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", event => {
